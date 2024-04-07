@@ -28,7 +28,7 @@ def generate_report(
         generated_sql = generated_query['query']
 
         # Compare the queries and highlight the differences
-        expected_highlighted, generated_highlighted = compare_queries(expected_sql, generated_sql)
+        token_similarity_score, changes, string_comparison = compare_queries(expected_sql, generated_sql)
 
         # Validate the generated query
         valid_query = validate_query(generated_sql, database)
@@ -38,12 +38,13 @@ def generate_report(
 
         report.append({
             'question': question,
-            'expected_sql': expected_highlighted,
-            'generated_sql': generated_highlighted,
+            'expected': expected_sql,
+            'generated': generated_sql,
+            'comparison_string': string_comparison,
             'expected_result': expected_result,
             'generated_result': generated_result,
             'valid_query': valid_query,
-            'matching_results': same_results
+            'same_results': same_results
         })
 
     return report
@@ -62,19 +63,18 @@ def print_report(report: list):
     """
     for entry in report:
         print(f"Question: {entry['question']}")
-        print(f"Expected SQL: {entry['expected_sql']}")
-        print(f"Generated SQL: {entry['generated_sql']}")
+        print(f"Expected SQL: {entry['expected']}")
+        print(f"Comparison string:\n{entry['comparison_string']}")
+        print(f"Generated SQL: {entry['generated']}")
         print(f"Valid query: {entry['valid_query']}")
-        print(f"Same results: {entry['matching_results']}")
-        # print(f"Expected results: {entry['expected_result']}")
-        # print(f"Got results: {entry['generated_result']}")
+        print(f"Same results: {entry['same_results']}")
         print('------')
 
     # Count the number of valid queries and queries with same results
     valid_queries = sum(entry['valid_query'] for entry in report)
-    matching_results_count = sum(entry['matching_results'] for entry in report if entry['matching_results'] is True)
-    partial_results_count = len([entry['matching_results'] for entry in report if entry['matching_results'] == 'partial'])
+    same_results_count = sum(entry['same_results'] for entry in report if entry['same_results'] is True)
+    partial_results_count = len([entry['same_results'] for entry in report if entry['same_results'] == 'partial'])
 
     print(f"Number of valid queries: {valid_queries}/{len(report)}")
-    print(f"Number of queries with same results: {matching_results_count}/{len(report)}")
+    print(f"Number of queries with same results: {same_results_count}/{len(report)}")
     print(f"Number of queries with partially matching results: {partial_results_count}/{len(report)}")
