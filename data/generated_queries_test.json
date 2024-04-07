@@ -1,0 +1,110 @@
+[
+    {
+        "question": "Which is the most popular voting method for Hall of Fame in 2000?",
+        "generated_query": "SELECT votedby, COUNT(*) as count FROM hall_of_fame WHERE yearid = 2000 GROUP BY votedby ORDER BY count DESC LIMIT 1"
+    },
+    {
+        "question": "How many players weigh over 200 pounds?",
+        "generated_query": "SELECT COUNT(*) FROM player WHERE weight > 200"
+    },
+    {
+        "question": "Who is the winner of Rookie of the Year in 2010?",
+        "generated_query": "SELECT p.name_first, p.name_last\nFROM player p\nJOIN player_award_vote pav ON p.player_id = pav.player_id\nJOIN player_award pa ON pav.award_id = pa.award_id\nWHERE pa.award_id = 'Rookie of the Year' AND pav.year = 2010 AND pav.points_won = pav.points_max"
+    },
+    {
+        "question": "Who is the highest paid player since 2010?",
+        "generated_query": "SELECT player_id, name_first, name_last, MAX(salary) AS highest_paid_salary\nFROM salary\nWHERE year >= 2010\nGROUP BY player_id, name_first, name_last\nORDER BY highest_paid_salary DESC\nLIMIT 1"
+    },
+    {
+        "question": "What are the salaries of players who have ever enter hall of fame?",
+        "generated_query": "SELECT T2.salary FROM salary as T2 JOIN hall_of_fame as T1 ON T1.player_id = T2.player_id"
+    },
+    {
+        "question": "What are the minimum votes needed to enter hall of fame for each year since 1871?",
+        "generated_query": "SELECT yearid, MIN(needed) FROM hall_of_fame WHERE yearid >= 1871 GROUP BY yearid"
+    },
+    {
+        "question": "What are the salaries in National League?",
+        "generated_query": "SELECT salary FROM salary WHERE league_id = 'NL'"
+    },
+    {
+        "question": "What are the salaries in American League?",
+        "generated_query": "SELECT salary FROM salary WHERE league_id = 'AL'"
+    },
+    {
+        "question": "Which birth place has the most player awards?",
+        "generated_query": "SELECT birth_city, birth_state, birth_country, COUNT(*) as num_awards\nFROM player\nJOIN player_award ON player.player_id = player_award.player_id\nGROUP BY birth_city, birth_state, birth_country\nORDER BY num_awards DESC\nLIMIT 1"
+    },
+    {
+        "question": "What are the birth places of players won on hall of fame since 1871?",
+        "generated_query": "SELECT DISTINCT birth_country, birth_state, birth_city\nFROM player\nWHERE player_id IN (\n    SELECT player_id\n    FROM hall_of_fame\n    WHERE inducted = 'Y' AND yearid >= 1871\n)"
+    },
+    {
+        "question": "Which award has the highest player's salary?",
+        "generated_query": "SELECT award_id\nFROM player_award\nJOIN salary ON player_award.player_id = salary.player_id\nGROUP BY award_id\nORDER BY sum(salary) DESC\nLIMIT 1"
+    },
+    {
+        "question": "What were the years when any special elections happened in hall of fame?",
+        "generated_query": "SELECT DISTINCT yearid FROM hall_of_fame WHERE category = \"Special Election\""
+    },
+    {
+        "question": "Top 10 countries with the most hall of fame players",
+        "generated_query": "SELECT birth_country, COUNT(*) AS num_players\nFROM player\nWHERE player_id IN (SELECT player_id FROM hall_of_fame WHERE inducted = 'Y')\nGROUP BY birth_country\nORDER BY num_players DESC\nLIMIT 10"
+    },
+    {
+        "question": "For every award, who is the youngest winner?",
+        "generated_query": "SELECT award_id, MIN(birth_year) AS youngest_winner_birth_year\nFROM player_award\nJOIN player ON player_award.player_id = player.player_id\nGROUP BY award_id"
+    },
+    {
+        "question": "For every award, who is the oldest winner?",
+        "generated_query": "SELECT award_id, name_first, name_last, MAX(birth_year) AS oldest_winner\nFROM player_award\nJOIN player ON player_award.player_id = player.player_id\nGROUP BY award_id"
+    },
+    {
+        "question": "Top 10 teams with the most hall of fame players",
+        "generated_query": "SELECT T1.team_id, COUNT(T2.player_id) AS num_players\nFROM hall_of_fame AS T1\nJOIN player AS T2 ON T1.player_id = T2.player_id\nGROUP BY T1.team_id\nORDER BY num_players DESC\nLIMIT 10"
+    },
+    {
+        "question": "Average lifespan of hall of fame players",
+        "generated_query": "SELECT avg( death_year - birth_year ) \nFROM player \nWHERE player_id IN (SELECT player_id FROM hall_of_fame WHERE inducted = 'Y')"
+    },
+    {
+        "question": "For award winners, what's average weight for each position",
+        "generated_query": "SELECT T1.position, AVG(T2.weight) \nFROM player_award AS T1 \nJOIN player AS T2 ON T1.player_id = T2.player_id \nGROUP BY T1.position"
+    },
+    {
+        "question": "For award winners, which position that has the most hall of fame players?",
+        "generated_query": "SELECT T3.position, COUNT(*) as count FROM player_award as T1 JOIN hall_of_fame as T2 ON T1.player_id = T2.player_id JOIN player as T3 ON T1.player_id = T3.player_id WHERE T2.inducted = \"Y\" GROUP BY T3.position ORDER BY count DESC LIMIT 1"
+    },
+    {
+        "question": "Which player get the highest score in 1971?",
+        "generated_query": "SELECT T1.player_id, T1.points_won FROM player_award_vote as T1 WHERE T1.year = \"1971\" ORDER BY T1.points_won DESC LIMIT 1"
+    },
+    {
+        "question": "Which month that players were born has the highest likelihood to be elected as hall of fame?",
+        "generated_query": "SELECT birth_month, COUNT(*) as count FROM player JOIN hall_of_fame ON player.player_id = hall_of_fame.player_id WHERE hall_of_fame.inducted = \"Y\" GROUP BY birth_month ORDER BY count DESC LIMIT 1"
+    },
+    {
+        "question": "Which league has the most player awarded in 2006?",
+        "generated_query": "SELECT league_id, COUNT(DISTINCT player_id) AS num_players_awarded\nFROM player_award\nWHERE year = 2006\nGROUP BY league_id\nORDER BY num_players_awarded DESC\nLIMIT 1"
+    },
+    {
+        "question": "What defense position the player ID willite01 is?",
+        "generated_query": "SELECT player_id, defense_position FROM player WHERE player_id = 'willite01'"
+    },
+    {
+        "question": "How many players were awarded more than ten times?",
+        "generated_query": "SELECT COUNT(player_id) FROM player_award GROUP BY player_id HAVING COUNT(player_id) > 10"
+    },
+    {
+        "question": "Which city the most players were born?",
+        "generated_query": "SELECT birth_city, COUNT(*) as player_count\nFROM player\nGROUP BY birth_city\nORDER BY player_count DESC\nLIMIT 1"
+    },
+    {
+        "question": "What is the average weight of players who were awarded third-base man in TSN all-star award?",
+        "generated_query": "SELECT avg(weight) FROM player\nWHERE player_id IN (\n    SELECT player_id FROM player_award\n    WHERE award_id = 'TSN all-star award' AND notes = 'third-base man'\n)"
+    },
+    {
+        "question": "Who is the player had the highest salary in 2015?",
+        "generated_query": "SELECT player_id FROM salary WHERE year = 2015 ORDER BY salary DESC LIMIT 1"
+    }
+]
