@@ -1,19 +1,44 @@
 import json
+import argparse
 
 from nl2sqleval import generate_report, print_report
 from nl2sqleval.database import Database
 
 
-if __name__ == '__main__':
-    db_path = "../data/database.sqlite"
-    database = Database(db_path)
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Evaluate SQL queries generated from natural language.')
+    parser.add_argument(
+        '--db_path',
+        type=str,
+        default='../data/database.sqlite',
+        help='Path to the SQLite database file'
+    )
+    parser.add_argument(
+        '--expected_queries_path',
+        type=str,
+        default='../data/examples_queries_test.json',
+        help='Path to the JSON file containing the expected queries'
+    )
+    parser.add_argument(
+        '--generated_queries_path',
+        type=str,
+        default='../data/generated_queries_test.json',
+        help='Path to the JSON file containing the generated queries'
+    )
+    return parser.parse_args()
 
-    # Load the expected queries from data/examples_queries_test.json
-    with open('../data/examples_queries_test.json', 'r') as f:
+
+if __name__ == '__main__':
+    args = parse_arguments()
+
+    database = Database(args.db_path)
+
+    # Load the expected queries from the specified file
+    with open(args.expected_queries_path, 'r') as f:
         expected_queries = json.load(f)
 
-    # Load the generated queries from data/generated_queries_test.json
-    with open('../data/generated_queries_test.json', 'r') as f:
+    # Load the generated queries from the specified file
+    with open(args.generated_queries_path, 'r') as f:
         generated_queries = json.load(f)
 
     # Compare the queries

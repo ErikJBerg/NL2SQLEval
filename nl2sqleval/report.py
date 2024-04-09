@@ -1,3 +1,5 @@
+from statistics import mean
+
 from .sql_compare import compare_queries, validate_query, compare_results
 from .database import Database
 
@@ -36,16 +38,20 @@ def generate_report(
         # Compare the results of the queries
         same_results, expected_result, generated_result = compare_results(expected_sql, generated_sql, database)
 
-        report.append({
-            'question': question,
-            'expected': expected_sql,
-            'generated': generated_sql,
-            'comparison_string': string_comparison,
-            'expected_result': expected_result,
-            'generated_result': generated_result,
-            'valid_query': valid_query,
-            'same_results': same_results
-        })
+        report.append(
+            {
+                'question': question,
+                'expected': expected_sql,
+                'generated': generated_sql,
+                'comparison_string': string_comparison,
+                'expected_result': expected_result,
+                'generated_result': generated_result,
+                'valid_query': valid_query,
+                'same_results': same_results,
+                'query_token_similarity_score': token_similarity_score,
+                'changes': changes
+            }
+        )
 
     return report
 
@@ -61,20 +67,37 @@ def print_report(report: list):
             - valid_query
             - matching_results
     """
-    for entry in report:
-        print(f"Question: {entry['question']}")
-        print(f"Expected SQL: {entry['expected']}")
-        print(f"Comparison string:\n{entry['comparison_string']}")
-        print(f"Generated SQL: {entry['generated']}")
-        print(f"Valid query: {entry['valid_query']}")
-        print(f"Same results: {entry['same_results']}")
-        print('------')
+    valid_queries = [comparison for comparison in report if comparison['valid_query']]
+    queries_with_same_results = [comparison for comparison in report if comparison['same_results'] is True]
+    queries_with_partially_matching_results = [
+        comparison for comparison in report if comparison['same_results'] == 'partial'
+    ]
 
-    # Count the number of valid queries and queries with same results
-    valid_queries = sum(entry['valid_query'] for entry in report)
-    same_results_count = sum(entry['same_results'] for entry in report if entry['same_results'] is True)
-    partial_results_count = len([entry['same_results'] for entry in report if entry['same_results'] == 'partial'])
+    total_queries = len(report)
+    num_valid_queries = len(valid_queries)
+    num_queries_with_same_results = len(queries_with_same_results)
+    num_queries_with_partially_matching_results = len(queries_with_partially_matching_results)
 
-    print(f"Number of valid queries: {valid_queries}/{len(report)}")
-    print(f"Number of queries with same results: {same_results_count}/{len(report)}")
-    print(f"Number of queries with partially matching results: {partial_results_count}/{len(report)}")
+    # Calculate additional metrics
+    percentage_valid_queries = (num_valid_queries / total_queries) * 100
+    percentage_queries_with_same_results = (num_queries_with_same_results / total_queries) * 100
+
+    similarity_scores = [r['query_token_similarity_score'] for r in valid_queries]
+    average_similarity_score = mean(similarity_scores) if similarity_scores else 0.0
+
+    for result in report:
+        print("------")
+        print(f"Question: {result['question']}")
+        print(f"Expected SQL: {result['expected']}")
+        print(f"Comparison string:\n{result['comparison_string']}")
+        print(f"Generated SQL: {result['generated']}")
+        print(f"Valid query: {result['valid_query']}")
+        print(f"Same results: {result['same_results']}")
+
+    print(f"\nPercentage of valid queries: {percentage_valid_queries:.2f}%")
+    print(f"Percentage of queries with same results: {percentage_queries_with_same_results:.2f}%")
+    print(f"Average similarity score: {average_similarity_score:.2f}")
+
+    print(f"Number of valid queries: {num_valid_queries}/{total_queries}")
+    print(f"Number of queries with same results: {num_queries_with_same_results}/{total_queries}")
+    print(f"Number of queries with partially matching results: {num_queries_with_partially_matching_results}/{total_queries}")
