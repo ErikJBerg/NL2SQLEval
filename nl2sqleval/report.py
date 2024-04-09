@@ -14,6 +14,7 @@ def generate_report(
         - compare queries
         - check validity of each query
         - compare the results of the queries and check partial or complete match
+        - track errors that occur during query execution
 
     Args:
         expected_queries (list): List of expected queries as dictionaries containing 'question' and 'query' keys
@@ -38,6 +39,17 @@ def generate_report(
         # Compare the results of the queries
         same_results, expected_result, generated_result = compare_results(expected_sql, generated_sql, database)
 
+        # Track errors that occur during query execution
+        if isinstance(expected_result, dict):
+            expected_error = expected_result.get('error', None)
+        else:
+            expected_error = None
+
+        if isinstance(generated_result, dict):
+            generated_error = generated_result.get('error', None)
+        else:
+            generated_error = None
+
         report.append(
             {
                 'question': question,
@@ -49,12 +61,16 @@ def generate_report(
                 'valid_query': valid_query,
                 'same_results': same_results,
                 'query_token_similarity_score': token_similarity_score,
-                'changes': changes
+                'changes': changes,
+                'expected_error': expected_error,
+                'generated_error': generated_error
             }
         )
 
     return report
 
+
+from statistics import mean
 
 def print_report(report: list):
     """Print the comparison report.
@@ -62,16 +78,25 @@ def print_report(report: list):
     Args:
         report (list): List of dictionaries containing the comparison results as dictionaries with keys:
             - question
-            - expected_sql
-            - generated_sql
+            - expected
+            - generated
+            - comparison_string
+            - expected_result
+            - generated_result
             - valid_query
-            - matching_results
+            - same_results
+            - query_token_similarity_score
+            - changes
+            - expected_error
+            - generated_error
     """
     valid_queries = [comparison for comparison in report if comparison['valid_query']]
     queries_with_same_results = [comparison for comparison in report if comparison['same_results'] is True]
     queries_with_partially_matching_results = [
-        comparison for comparison in report if comparison['same_results'] == 'partial'
+        comparison for comparison in report if 'partial' in str(comparison['same_results'])
     ]
+    expected_errors = [comparison['expected_error'] for comparison in report if comparison['expected_error']]
+    generated_errors = [comparison['generated_error'] for comparison in report if comparison['generated_error']]
 
     total_queries = len(report)
     num_valid_queries = len(valid_queries)
@@ -93,6 +118,8 @@ def print_report(report: list):
         print(f"Generated SQL: {result['generated']}")
         print(f"Valid query: {result['valid_query']}")
         print(f"Same results: {result['same_results']}")
+        print(f"Expected error: {result['expected_error']}")
+        print(f"Generated error: {result['generated_error']}")
 
     print(f"\nPercentage of valid queries: {percentage_valid_queries:.2f}%")
     print(f"Percentage of queries with same results: {percentage_queries_with_same_results:.2f}%")
@@ -101,3 +128,5 @@ def print_report(report: list):
     print(f"Number of valid queries: {num_valid_queries}/{total_queries}")
     print(f"Number of queries with same results: {num_queries_with_same_results}/{total_queries}")
     print(f"Number of queries with partially matching results: {num_queries_with_partially_matching_results}/{total_queries}")
+    print(f"Ratio of generated/expected errors: {len(generated_errors)}/{len(expected_errors)}")
+    print("------")

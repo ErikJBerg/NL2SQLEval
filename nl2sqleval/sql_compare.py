@@ -176,17 +176,29 @@ def validate_query(query: str, database: Database):
         return False
 
 
-def compare_results(expected_query: str, generated_query: str, database: Database):
+def compare_results(
+        expected_query: str,
+        generated_query: str,
+        database: Database,
+        ignore_row_order=True,
+        ignore_column_order=True
+):
     """Compare the results of two queries.
 
     Args:
         expected_query (str): The expected query
         generated_query (str): The generated query
         database (Database): Database object to execute the queries
+        ignore_row_order (bool): Whether to ignore the order of rows in the comparison (default: True)
+        ignore_column_order (bool): Whether to ignore the order of columns in the comparison (default: True)
 
     Returns:
-        Tuple: A tuple containing the comparison result (True/False), the expected results, and the generated results
-            - in case of a partial match, the comparison result is 'partial'
+        Tuple: A tuple containing the comparison result (True/False/partial/partial_incomplete),
+               the expected results, and the generated results
+            - in case of an exact match, the comparison result is True
+            - in case of a partial match (all expected values in generated results), the comparison result is 'partial'
+            - in case of a partial match (at least one expected value in generated results), the comparison result is 'partial_incomplete'
+            - in case of no match, the comparison result is False
             - in case of failure to execute the queries, the results are returned as dictionaries with an 'error' key
 
     """
@@ -206,13 +218,32 @@ def compare_results(expected_query: str, generated_query: str, database: Databas
     except Exception as e:
         generated_result = {'error': str(e)}
 
-    if 'error' in generated_result or len(expected_result) != len(generated_result):
+    if 'error' in generated_result or 'error' in expected_result or len(expected_result) != len(generated_result):
         return False, expected_result, generated_result
+
+    if ignore_row_order:
+        expected_result = sorted(expected_result, key=lambda row: [str(item) for item in row])
+        generated_result = sorted(generated_result, key=lambda row: [str(item) for item in row])
+
+    if ignore_column_order:
+        expected_result = [sorted(str(item) for item in row) for row in expected_result]
+        generated_result = [sorted(str(item) for item in row) for row in generated_result]
+
+    partial_match = False
+    partial_incomplete_match = False
 
     for exp_row, gen_row in zip(expected_result, generated_result):
         if exp_row != gen_row:
-            if all(item in gen_row for item in exp_row):
-                return 'partial', expected_result, generated_result
-            return False, expected_result, generated_result
+            if all(str(item) in [str(i) for i in gen_row] for item in exp_row) and not partial_incomplete_match:
+                partial_match = True
+            elif any(str(item) in [str(i) for i in gen_row] for item in exp_row):
+                partial_incomplete_match = True
+            else:
+                return False, expected_result, generated_result
 
-    return True, expected_result, generated_result
+    if partial_match:
+        return 'partial', expected_result, generated_result
+    elif partial_incomplete_match:
+        return 'partial_incomplete', expected_result, generated_result
+    else:
+        return True, expected_result, generated_result
