@@ -1,4 +1,5 @@
 from statistics import mean
+from collections import Counter
 
 from .sql_compare import compare_queries, validate_query, compare_results
 from .database import Database
@@ -70,7 +71,15 @@ def generate_report(
     return report
 
 
-from statistics import mean
+def calculate_change_similarity_score(changes: list[tuple]) -> float:
+    # Assign weights to different change types (adjust as needed)
+    weights = {'Insert': 1, 'Remove': 2}
+    weighted_changes = sum(weights.get(change[1], 1) for change in changes)
+    max_weighted_changes = len(changes) * max(weights.values())
+    if max_weighted_changes == 0 or weighted_changes == 0:
+        return 0.0
+    return 1 - (weighted_changes / max_weighted_changes)
+
 
 def print_report(report: list):
     """Print the comparison report.
@@ -103,9 +112,23 @@ def print_report(report: list):
     num_queries_with_same_results = len(queries_with_same_results)
     num_queries_with_partially_matching_results = len(queries_with_partially_matching_results)
 
-    # Calculate additional metrics
     percentage_valid_queries = (num_valid_queries / total_queries) * 100
     percentage_queries_with_same_results = (num_queries_with_same_results / total_queries) * 100
+
+    # Calculate average number of changes per query
+    all_changes = [result['changes'] for result in valid_queries]
+    total_changes = sum(len(changes) for changes in all_changes)
+    average_changes_per_query = total_changes / num_valid_queries if num_valid_queries > 0 else 0
+
+    # Calculate distribution of change types
+    change_types = Counter()
+    for changes in all_changes:
+        for change in changes:
+            change_types[change[1]] += 1
+
+    # Calculate change similarity score
+    change_similarity_scores = [calculate_change_similarity_score(result['changes']) for result in valid_queries]
+    average_change_similarity_score = mean(change_similarity_scores) if change_similarity_scores else 0.0
 
     similarity_scores = [r['query_token_similarity_score'] for r in valid_queries]
     average_similarity_score = mean(similarity_scores) if similarity_scores else 0.0
@@ -120,13 +143,27 @@ def print_report(report: list):
         print(f"Same results: {result['same_results']}")
         print(f"Expected error: {result['expected_error']}")
         print(f"Generated error: {result['generated_error']}")
+        print(f'Similarity score: {result["query_token_similarity_score"]:.2f}')
+        print(f'Changes: {result["changes"]}')
 
     print(f"\nPercentage of valid queries: {percentage_valid_queries:.2f}%")
     print(f"Percentage of queries with same results: {percentage_queries_with_same_results:.2f}%")
     print(f"Average similarity score: {average_similarity_score:.2f}")
+    print('------')
+
+    print('Change statistics:')
+    print(f"Total number of changes: {total_changes}")
+    print(f"Average number of changes per query: {average_changes_per_query:.2f}")
+    print(f"Change distribution: {change_types}")
+    print(f"Average change similarity score: {average_change_similarity_score:.2f}")
+    print('------')
 
     print(f"Number of valid queries: {num_valid_queries}/{total_queries}")
     print(f"Number of queries with same results: {num_queries_with_same_results}/{total_queries}")
-    print(f"Number of queries with partially matching results: {num_queries_with_partially_matching_results}/{total_queries}")
+    print(
+        "Number of queries with partially matching results: "
+        f"{num_queries_with_partially_matching_results}/{total_queries}"
+    )
     print(f"Ratio of generated/expected errors: {len(generated_errors)}/{len(expected_errors)}")
     print("------")
+

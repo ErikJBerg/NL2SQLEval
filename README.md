@@ -103,4 +103,6 @@ For a production-ready solution, we need:
   - in result comparison, we should also consider the order of the rows in the result set
   - in result comparison, we should consider the data types and formats of the columns in the result set
 - add support for more database management systems (e.g., MySQL, PostgreSQL, SQL Server)
-
+- implement analysis of correlation between changes and other metrics: 
+  - explore the relationship between the changes and other metrics such as query validity, result similarity, and error occurrence. 
+  - investigate whether certain types of changes are more likely to lead to invalid queries, different results, or errors.
